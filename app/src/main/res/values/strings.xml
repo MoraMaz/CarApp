@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">CarApp</string>
+    <string name="action_settings">Settings</string>
+    <array name="actions">
+        <item>Mover Izquierda</item>
+        <item>Mover Derecha</item>
+        <item>Esquivar Izquierda</item>
+        <item>Esquivar Derecha</item>
+    </array>
+</resources>
