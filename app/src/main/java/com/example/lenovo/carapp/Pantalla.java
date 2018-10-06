@@ -24,6 +24,21 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.UUID;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.NetworkResponse;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.VolleyLog;
+import com.android.volley.toolbox.HttpHeaderParser;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import java.io.UnsupportedEncodingException;
+import java.util.List;
+
 public class Pantalla extends AppCompatActivity {
     Handler bluetoothIn;
     final int handlerState = 0;        				 //used to identify handler message
@@ -38,6 +53,16 @@ public class Pantalla extends AppCompatActivity {
     private String[] actions = {" ", "Mover Izquierda", "Mover Derecha", "Esquivar Izquierda", "Esquivar Derecha"};
     public String[] selected = {"","","","",""};
     public int[] options = {-1,-1,-1,-1,-1};
+
+    public String ejeX = "0";
+    public String ejeY = "0";
+    public String ejeZ = "0";
+    public String velocidad = "0";
+    public String distancia = "0";
+    public String tiempo_total = "0";
+    public String objeto = "0";
+    public String tiempo_decision = "0";
+    public String colores = "0";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +81,8 @@ public class Pantalla extends AppCompatActivity {
                     }
                 for(int i = 0; i < 5; i++) {
                     mConnectedThread.write(String.valueOf(options[i]));
+                    if(i < 4)
+                        mConnectedThread.write(",");
                 }
             }
         });
@@ -98,6 +125,7 @@ public class Pantalla extends AppCompatActivity {
         sAction.setAdapter(adapter);
         setActionOfAction(sAction);
         dataInPrint = "";
+
         bluetoothIn = new Handler(){
             public void handleMessage(android.os.Message msg) {
                 if (msg.what == handlerState) {                                        //if message is what we want
@@ -107,7 +135,19 @@ public class Pantalla extends AppCompatActivity {
                     if (endOfLineIndex > 0) {                                           // make sure there data before ~
                         dataInPrint = recDataString.substring(0, endOfLineIndex);
                         System.out.println("*********************************************************"+dataInPrint);// extract string
-                        //punteo.setText(dataInPrint);
+                        java.util.List<String> items = java.util.Arrays.asList(dataInPrint.split(","));
+                        ejeX = items.get(0);
+                        ejeY = items.get(1);
+                        ejeZ = items.get(2);
+                        velocidad = items.get(3);
+                        distancia = items.get(4);
+                        tiempo_total = items.get(5);
+                        objeto = items.get(6);
+                        tiempo_decision = items.get(7);
+                        colores = items.get(8);
+
+                        Request();
+
                         recDataString.delete(0, recDataString.length());                    //clear all string data
                         dataInPrint = "";
                     }
@@ -1055,4 +1095,100 @@ public class Pantalla extends AppCompatActivity {
             }
         }
     }
+
+    public void Request()
+    {
+
+        // Instantiate the RequestQueue.
+        RequestQueue queue = Volley.newRequestQueue(this);
+        String url ="http://18.218.98.107/acye2/rest/insertarregistro/";
+
+
+
+        // Request
+        StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        // Display the first 500 characters of the response string.
+
+                        //Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+                        //DespachosLista post = gson.fromJson(response, DespachosLista.class);
+                        String validar = "\"Codigo\":1";
+                        if(response.contains(validar)){
+
+                        }else{
+                            //System.out.println("Error");
+                            msg("error");
+                        }
+
+
+
+
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                //System.out.println("Error de comunicacion");
+                msg("Error de comunicacion");
+            }
+        })
+
+        {
+            @Override
+            public String getBodyContentType() {
+                return "application/json; charset=utf-8";
+            }
+
+            @Override
+            public byte[] getBody() throws AuthFailureError {
+
+
+
+                String     requestBody = "{\n" +
+                        "     \"Eje_X\":"+ ejeX.trim() +",\n" +
+                        "     \"Eje_Y\":"+ ejeY.trim() + ",\n" +
+                        "     \"Eje_Z\":"+ ejeZ.trim() + ",\n" +
+                        "     \"Velocidad\":"+velocidad.trim()+ ",\n" +
+                        "     \"Distancia\":"+distancia.trim() + ",\n" +
+                        "     \"Tiempo_total\":"+ "\"" + tiempo_total.trim() + "\"" + ",\n" +
+                        "     \"Objeto\":"+ "\"" + objeto.trim() + "\"" + ",\n" +
+                        "     \"Tiempo_decision\":"+ "\"" + tiempo_decision.trim() + "\"" + ",\n" +
+                        "     \"Colores\":"+ "\"" + colores.trim() + "\"" + "\n";
+
+
+
+                requestBody +=
+                        "}";
+
+
+
+                try {
+
+                    return requestBody == null ? null : requestBody.getBytes("utf-8");
+                } catch (UnsupportedEncodingException uee) {
+                    VolleyLog.wtf("Unsupported Encoding while trying to get the bytes of %s using %s", requestBody, "utf-8");
+                    return null;
+                }
+            }
+            @Override
+            protected Response<String> parseNetworkResponse(NetworkResponse response) {
+                String responseString = "";
+                if (response != null) {
+                    responseString = new String(response.data);
+                }
+                return Response.success(responseString, HttpHeaderParser.parseCacheHeaders(response));
+            }
+        };
+
+
+        // Add the request to the RequestQueue.
+        queue.add(stringRequest);
+
+    }
+
+    private void msg(String s) {
+        Toast.makeText(getApplicationContext(), s, Toast.LENGTH_LONG).show();
+    }
+
 }
